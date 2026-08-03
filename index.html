@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="pt-br">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.3.0/css/all.min.css"
+            integrity="sha512-ApSLB1Pd3/bZN8fWB/RG9YhN/7bd9Hkf3AGaE2mPfebjrxagjuBtx2GcgdqIlJkUzwylBo61r9Xa9NmgBI0swA=="
+            crossorigin="anonymous"
+            referrerpolicy="no-referrer"
+        />
+        <link
+            rel="shortcut icon"
+            href="./assets/images/favicon.png"
+            type="image/x-icon"
+        />
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
+        <link rel="stylesheet" href="./css/style.css" />
+        <link rel="stylesheet" href="./css/createPlaylistForm.css" />
+        <link rel="stylesheet" href="./css/addMusicForm.css" />
+        <link rel="stylesheet" href="./css/media.css" />
+        <title>Music Player</title>
+    </head>
+    <body>
+        <main class="player-layout">
+            <section class="main-playlist-section">
+                <div class="playlist-header">
+                    <div>
+                        <span>Playlist Atual</span>
+                        <h1 class="playlist-title">Selecione uma Playlist</h1>
+                    </div>
+                    <div class="playlist-tools">
+                        <button
+                            class="tool-btn"
+                            id="random-player"
+                            title="Ativar ordem aleatoria"
+                        >
+                            <i class="fa-solid fa-shuffle"></i>
+                        </button>
+                        <button
+                            class="tool-btn"
+                            id="repeat-player"
+                            title="Ativar repedição"
+                        >
+                            <i class="fa-solid fa-repeat"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="current-player-card">
+                    <div class="music-cover-lg" id="music-image"></div>
+
+                    <div class="player-info-container">
+                        <div class="music-text-content">
+                            <h2 id="music-name">Nome da Música</h2>
+                            <p id="artist-name">Nome do Artista</p>
+                        </div>
+
+                        <div class="bar-content">
+                            <span id="current-time">00:00</span>
+                            <div class="progress-bar-container" id="bar">
+                                <div
+                                    class="progress-bar-fill"
+                                    id="progress-bar"
+                                ></div>
+                            </div>
+                            <span id="music-time">00:00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-block">
+                    <h3 class="section-heading">Músicas</h3>
+                    <div class="music-list" id="music-list">
+                        <!-- Musics -->
+                    </div>
+                </div>
+
+                <div class="current-music-dock" id="current-music">
+                    <div class="dock-left">
+                        <div class="dock-img"></div>
+                        <div class="music-item-details">
+                            <p class="dock-music__name">Nome da Música</p>
+                            <p class="dock-music__artist">Nome do artista</p>
+                        </div>
+                    </div>
+
+                    <div class="music-tools" id="music-tools">
+                        <button class="control-btn" id="btn-prev">
+                            <i class="fa-solid fa-backward-step"></i>
+                        </button>
+                        <button class="control-btn primary" id="btn-player">
+                            <i class="fa-solid fa-play"></i>
+                        </button>
+                        <button
+                            class="control-btn primary"
+                            id="btn-pause"
+                            style="display: none"
+                        >
+                            <i class="fa-solid fa-pause"></i>
+                        </button>
+                        <button class="control-btn" id="btn-next">
+                            <i class="fa-solid fa-forward-step"></i>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="sidebar-playlists">
+                <h2 class="section-heading">Suas Playlists</h2>
+                <div class="playlists-grid">
+                    <!-- Playlists -->
+                </div>
+
+                <button
+                    class="create-playlist-btn"
+                    id="create-playlist"
+                    title="Criar Playlist"
+                >
+                    <i class="fa-solid fa-plus"></i>
+                </button>
+            </section>
+        </main>
+
+        <form id="create-playlist-form">
+            <h2>Nova Playlist</h2>
+            <div id="playlist-name">
+                <label for="playlist-name__input">Nome da Playlist</label>
+                <input
+                    type="text"
+                    name="playlist-name__input"
+                    id="playlist-name__input"
+                />
+            </div>
+
+            <div class="buttons">
+                <button type="button" id="create-playlist-cancel">
+                    Cancelar
+                </button>
+                <button type="submit" id="create-playlist-submit">Criar</button>
+            </div>
+        </form>
+
+        <form id="add-music-form">
+            <h2>Adicionar música</h2>
+            <div id="music__view">
+                <div class="image__view"></div>
+                <p class="music-name__view"></p>
+                <p class="artist-name__view"></p>
+            </div>
+
+            <div id="add-music-content">
+                <label for="file" class="file-input">
+                    <div class="drop-zone" id="drop-zone">
+                        <p><b>Selecione um arquivo</b> ou solte aqui</p>
+                    </div>
+                    <input type="file" id="file" accept=".mp3, .wav" />
+                </label>
+            </div>
+
+            <div class="buttons">
+                <button type="button" id="add-music-cancel">Cancelar</button>
+                <button type="submit" id="add-music-submit">Adicionar</button>
+            </div>
+        </form>
+
+        <script type="module" src="js/main.js"></script>
+    </body>
+</html>

@@ -1,0 +1,407 @@
+:root {
+    --bg-main: #121214;
+    --bg-surface: #1a1a1e;
+    --bg-card: #222228;
+    --bg-card-hover: #2d2d35;
+    --purple-primary: #8a2be2;
+    --purple-hover: #9b4dca;
+    --purple-light: #b05fff;
+    --text-main: #f0f0f5;
+    --text-muted: #a0a0ab;
+    --border-color: #2e2e38;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+}
+
+/* --- Layout Principal --- */
+.player-layout {
+    box-sizing: border-box;
+    width: 100vw;
+    height: 100dvh;
+    padding: 24px;
+    display: flex;
+    gap: 24px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* --- Seção Esquerda (Playlist & Player) --- */
+.main-playlist-section {
+    flex: 1;
+    background-color: var(--bg-surface);
+    border-radius: 16px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    position: relative;
+    border: 1px solid var(--border-color);
+}
+
+.playlist-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.playlist-header span {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.playlist-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.playlist-tools {
+    display: flex;
+    gap: 10px;
+}
+
+.tool-btn {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.tool-btn.active {
+    background: var(--purple-primary);
+    border-color: var(--purple-primary);
+}
+
+.tool-btn:hover {
+    background: var(--purple-primary);
+    border-color: var(--purple-primary);
+}
+
+/* --- Card do Player Atual (Topo) --- */
+.current-player-card {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    background: linear-gradient(135deg, var(--bg-card) 0%, rgba(138, 43, 226, 0.15) 100%);
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+}
+
+.music-cover-lg {
+    width: 140px;
+    height: 140px;
+    border-radius: 8px;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+    background-position: center;
+    background-size: cover;
+}
+
+.player-info-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.music-text-content h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.music-text-content p {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+/* --- Barra de Progresso --- */
+.bar-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.bar-content span {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.progress-bar-container {
+    background-color: var(--border-color);
+    flex-grow: 1;
+    height: 6px;
+    min-width: 150px;
+    border-radius: 3px;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    background-color: var(--purple-primary);
+    width: 0%;
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.1s linear;
+}
+
+/* --- Lista de Músicas --- */
+.section-block {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.section-heading {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.music-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    scrollbar-width: none;
+    padding-right: 4px;
+    padding-bottom: 70px;
+}
+
+.music-item-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.music-item {
+    background-color: var(--bg-card);
+    padding: 10px 14px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: background 0.2s;
+    border: 1px solid transparent;
+}
+
+.music-item:hover {
+    background-color: var(--bg-card-hover);
+    border-color: var(--purple-primary);
+}
+
+.music-item.select {
+    background-color: rgba(154, 77, 202, 0.3);
+    border-color: var(--purple-primary);
+}
+
+.music-item-img {
+    width: 45px;
+    height: 45px;
+    border-radius: 6px;
+    background-position: center;
+    background-size: cover;
+}
+
+#remove-music-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.4);
+    cursor: pointer;
+    display: none;
+}
+
+#remove-music-btn:hover {
+    color: var(--text-main);
+    text-shadow: rgba(255, 255, 255, 0.5) 1px 0 10px;
+}
+
+.music-item:hover #remove-music-btn {
+    display: block;
+}
+
+#add-music-to-playlist,
+#remove-music-playlist {
+    font-size: 1.3rem;
+    color: rgba(255, 255, 255, 0.3);
+}
+
+#add-music-to-playlist:hover,
+#remove-music-playlist:hover {
+    color: rgba(255, 255, 255, 0.8);
+    text-shadow: rgba(255, 255, 255, 0.2) 1px 0 5px;
+}
+
+.list-music__name {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.list-music__artist {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+/* --- Player Dock / Controles Inferiores Flutuantes --- */
+.current-music-dock {
+    box-sizing: border-box;
+    background-color: var(--bg-card);
+    padding: 12px 20px;
+    border-radius: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 -10px 25px -10px rgba(0, 0, 0, 0.8);
+    position: absolute;
+    top: 87%;
+    left: 0;
+    width: 100%;
+}
+
+.dock-music__name {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.dock-music__artist {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.dock-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.dock-img {
+    width: 45px;
+    height: 45px;
+    border-radius: 6px;
+    background-color: var(--bg-card-hover);
+    background-position: center;
+    background-size: cover;
+}
+
+.music-tools {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.control-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-main);
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    transition: background 0.2s, color 0.2s;
+}
+
+.control-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.control-btn.primary {
+    background: var(--purple-primary);
+    color: #fff;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.control-btn.primary:hover {
+    background: var(--purple-hover);
+}
+
+/* --- Seção Direita (Sidebar de Playlists) --- */
+.sidebar-playlists {
+    box-sizing: border-box;
+    width: 350px;
+    background-color: var(--bg-surface);
+    border-radius: 16px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    border: 1px solid var(--border-color);
+    position: relative;
+}
+
+.playlists-grid {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow-y: auto;
+    scrollbar-width: none;
+    flex-grow: 1;
+}
+
+.playlist-card-item {
+    background-color: var(--bg-card);
+    padding: 10px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: background 0.2s;
+    border: 1px solid transparent;
+    position: relative;
+}
+
+.playlist-card-item:hover {
+    background-color: var(--bg-card-hover);
+    border-color: var(--purple-primary);
+}
+
+.playlist-card-item:hover .add-music-btn {
+    display: flex;
+}
+
+.playlist-card-item.select {
+    background-color: rgba(154, 77, 202, 0.3);
+    border-color: var(--purple-primary);
+}
+
+.playlist-card-img {
+    width: 50px;
+    height: 50px;
+    border-radius: 6px;
+    object-fit: cover;
+}
+
+.playlist-name-text {
+    font-weight: 600;
+    font-size: 0.95srem;
+}
+
+.musics-number-text {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}

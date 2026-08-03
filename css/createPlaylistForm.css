@@ -1,0 +1,97 @@
+#create-playlist-form {
+    box-sizing: border-box;
+    width: 380px;
+    background-color: var(--bg-card);
+    padding: 30px;
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0px 0px 20px rgba(255, 255, 255, 0.1);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: none;
+}
+
+#create-playlist-form div {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+#create-playlist-form label {
+    font-size: 14px;
+}
+
+#create-playlist-form input {
+    background-color: var(--bg-main);
+    border: none;
+    outline: none;
+    padding: 10px;
+    border-radius: 5px;
+    margin-top: 5px;
+    color: var(--text-main);
+    font-size: 15px;
+}
+
+#create-playlist-submit {
+    box-sizing: border-box;
+    width: 100%;
+    background-color: var(--purple-primary);
+    border: none;
+    outline: none;
+    padding: 10px;
+    border-radius: 5px;
+    margin-top: 5px;
+    color: var(--text-main);
+    font-weight: bold;
+    font-size: 15px;
+    cursor: pointer;
+}
+
+#create-playlist-form .buttons {
+    display: flex;
+    flex-direction: row;
+    gap: 5px;
+}
+
+#create-playlist-cancel {
+    box-sizing: border-box;
+    width: 100%;
+    background-color: #525151;
+    border: none;
+    outline: none;
+    padding: 10px;
+    border-radius: 5px;
+    margin-top: 5px;
+    color: var(--text-main);
+    font-weight: bold;
+    font-size: 15px;
+    cursor: pointer;
+}
+
+
+.create-playlist-btn {
+    background-color: var(--purple-primary);
+    color: #fff;
+    border: none;
+    width: 48px;
+    min-height: 48px;
+    border-radius: 50%;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    bottom: 24px;
+    right: 24px;
+    box-shadow: 0 0px 12px rgba(138, 43, 226, 0.4);
+    transition: transform 0.2s, background 0.2s;
+}
+
+.create-playlist-btn:hover {
+    background-color: var(--purple-hover);
+    transform: scale(1.05);
+}
+
