@@ -11,6 +11,20 @@ export default class Playlist {
         this.musicsPlayed = [];
     }
 
+    // Gera um ID único e estável. Antes era "this.playlists.length" /
+    // "playlist.musics.length", o que causava colisão de IDs assim que um
+    // item era removido do meio da lista (o próximo item criado reutilizava
+    // um ID já existente). Isso confundia getMusicByID e, mais grave, a
+    // chave usada no IndexedDB ("${playlistId}_${musicId}"), fazendo o
+    // áudio de uma música ser lido/sobrescrito no lugar de outra.
+    static generateId() {
+        if (window.crypto && window.crypto.randomUUID) {
+            return window.crypto.randomUUID();
+        }
+        // Fallback simples para ambientes sem crypto.randomUUID
+        return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    }
+
     static createPlaylist(playlistName) {
         const playlistExists = this.playlists.some(
             (p) => p.name === playlistName,
@@ -22,7 +36,7 @@ export default class Playlist {
         const NEW_PLAYLIST = new Playlist(
             playlistName,
             [],
-            this.playlists.length,
+            this.generateId(),
         );
         this.playlists.push(NEW_PLAYLIST);
 
@@ -47,7 +61,7 @@ export default class Playlist {
             imageUrl,
             audioBuffer,
             MUSIC_DURATION,
-            playlist.musics.length,
+            this.generateId(),
             playlistId,
         );
 
@@ -61,6 +75,32 @@ export default class Playlist {
 
     static getPlaylistById(playlistId) {
         return this.playlists.find((p) => p.id == playlistId);
+    }
+
+    // Só aceita o alfabeto do base64. Bytes crus de imagem (formato antigo,
+    // de antes desta correção) quase sempre têm bytes fora desse conjunto,
+    // então esse teste é confiável na prática pra distinguir os dois casos.
+    static #BASE64_PATTERN = /^[A-Za-z0-9+/]*={0,2}$/;
+
+    // Músicas salvas ANTES desta correção guardavam a capa do álbum como
+    // bytes crus (não em base64). O código de renderização agora espera
+    // sempre base64, então dados antigos precisam ser convertidos uma vez
+    // ao carregar — sem isso, os bytes crus quebram o HTML gerado pela
+    // lista de músicas (é a causa dos "códigos estranhos" no lugar do
+    // nome/artista/capa).
+    static #migrateImageToBase64(image) {
+        if (!image) return image;
+        if (this.#BASE64_PATTERN.test(image)) return image; // já está ok
+
+        try {
+            return window.btoa(image);
+        } catch (error) {
+            console.error(
+                "Não foi possível migrar a capa de uma música salva (formato antigo):",
+                error,
+            );
+            return null;
+        }
     }
 
     static savePlaylistsData() {
@@ -80,37 +120,66 @@ export default class Playlist {
             })),
         }));
 
-        localStorage.setItem(
-            "MusicPlayer_Playlists",
-            JSON.stringify(dataToSave),
-        );
+        try {
+            localStorage.setItem(
+                "MusicPlayer_Playlists",
+                JSON.stringify(dataToSave),
+            );
+        } catch (error) {
+            // Pode estourar a cota do localStorage (ex: muitas capas de
+            // álbum grandes). Melhor avisar no console do que quebrar o
+            // fluxo de criar/adicionar música em silêncio.
+            console.error("Não foi possível salvar as playlists no localStorage:", error);
+        }
     }
 
     static loadPlaylistsData() {
-        const savedData = localStorage.getItem("MusicPlayer_Playlists");
+        let savedData;
+
+        try {
+            savedData = localStorage.getItem("MusicPlayer_Playlists");
+        } catch (error) {
+            console.error("Não foi possível ler as playlists do localStorage:", error);
+            return;
+        }
+
         if (!savedData) return;
 
-        const parsedData = JSON.parse(savedData);
+        let parsedData;
+        try {
+            parsedData = JSON.parse(savedData);
+        } catch (error) {
+            console.error("Dados de playlists corrompidos no localStorage:", error);
+            return;
+        }
+
+        let neededMigration = false;
 
         this.playlists = parsedData.map((pData) => {
-            const musics = pData.musics.map(
-                (mData) =>
-                    // O audioBuffer começa como null ao recarregar a página
-                    new Music(
-                        mData.name,
-                        mData.artist,
-                        mData.image,
-                        null,
-                        mData.duration,
-                        mData.id,
-                        mData.playlistId,
-                    ),
-            );
+            const musics = pData.musics.map((mData) => {
+                const migratedImage = this.#migrateImageToBase64(mData.image);
+                if (migratedImage !== mData.image) neededMigration = true;
+
+                // O audioBuffer começa como null ao recarregar a página
+                return new Music(
+                    mData.name,
+                    mData.artist,
+                    migratedImage,
+                    null,
+                    mData.duration,
+                    mData.id,
+                    mData.playlistId,
+                );
+            });
 
             const playlist = new Playlist(pData.name, musics, pData.id);
             playlist.size = pData.size;
             return playlist;
         });
+
+        // Persiste a versão já migrada, pra essa conversão não precisar
+        // rodar de novo a cada carregamento da página.
+        if (neededMigration) this.savePlaylistsData();
     }
 
     static removeMusic(playlistId, musicId) {

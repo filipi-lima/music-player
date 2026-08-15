@@ -66,6 +66,8 @@ const PLAYLIST_TOOLS_BTN = document.querySelectorAll(".playlist-tools");
 const BTN_RANDOM_PLAYER = document.querySelector("#random-player");
 const BTN_REPEAT_PLAYER = document.querySelector("#repeat-player");
 
+const PLACEHOLDER_IMAGE = "url(./assets/images/molde.png)";
+
 let currentPlaylist = null;
 let currentMusic = null;
 let selectedPlaylistForAdd = null;
@@ -77,6 +79,10 @@ let rawArrayBuffer = null;
 let musicImageData = null;
 let uploadedMusicName = "";
 let uploadedArtistName = "";
+
+// Usado para descartar respostas assíncronas "atrasadas" de uma seleção de
+// arquivo que já foi substituída por outra (ver FILE_INPUT change listener).
+let uploadToken = 0;
 
 // Carrega tudo salvo ao abrir o site
 window.addEventListener("DOMContentLoaded", () => {
@@ -93,6 +99,30 @@ window.addEventListener("DOMContentLoaded", () => {
         renderMusicList(currentPlaylist.musics);
     }
 });
+
+// Dispara quando uma música termina SOZINHA (evento nativo do Web Audio
+// API). Continua funcionando com a aba em segundo plano, diferente da
+// lógica antiga baseada em requestAnimationFrame.
+Music.onTrackEnded = (finishedMusic) => {
+    let nextMusic;
+
+    if (isRandomPlayer) {
+        nextMusic = Music.getRandomMusic(finishedMusic);
+    } else if (isRepeatPlayer) {
+        nextMusic = finishedMusic;
+    } else {
+        nextMusic = Music.nextMusic(finishedMusic);
+    }
+
+    if (nextMusic) {
+        switchToMusic(nextMusic);
+    } else {
+        resetProgressBar();
+        Music.unloadAudioBuffer(finishedMusic);
+        PLAYER_BTN.style.display = "flex";
+        PAUSE_BTN.style.display = "none";
+    }
+};
 
 const renderNewPlaylist = (playlist) => {
     const html = `
@@ -126,7 +156,7 @@ const renderMusicList = (musics) => {
                 </div>
             </div>
 
-            <button id="remove-music-btn" title="Remover desta Playlist">
+            <button class="remove-music-btn" title="Remover desta Playlist">
                 <i class="fa-solid fa-minus"></i>
             </button>
         </div>
@@ -152,8 +182,10 @@ const updatePlaylistCardInfo = (playlist) => {
 const updateCurrentMusicUI = () => {
     if (!currentMusic) return;
 
-    const bgImage = `url(data:image/jpg;base64,${window.btoa(currentMusic.image)})`;
-    const srcImage = `data:image/jpg;base64,${window.btoa(currentMusic.image)}`;
+    // A imagem já vem em base64 (convertida uma única vez no upload), então
+    // não precisamos mais rodar window.btoa() toda vez que a UI atualiza.
+    const bgImage = `url(data:image/jpg;base64,${currentMusic.image})`;
+    const srcImage = `data:image/jpg;base64,${currentMusic.image}`;
 
     CARD_MUSIC_IMAGE.style.backgroundImage = bgImage;
     if (CARD_MUSIC_IMAGE.tagName === "IMG") CARD_MUSIC_IMAGE.src = srcImage;
@@ -173,6 +205,23 @@ const updateCurrentMusicUI = () => {
     selectActiveMusicElement();
 };
 
+// Usado quando não há mais nenhuma música "atual" (ex: playlist esvaziada).
+const resetCurrentMusicUI = () => {
+    CARD_MUSIC_IMAGE.style.backgroundImage = PLACEHOLDER_IMAGE;
+    if (CARD_MUSIC_IMAGE.tagName === "IMG") CARD_MUSIC_IMAGE.src = "./assets/images/molde.png";
+    CARD_MUSIC_NAME.innerHTML = "Nome da Música";
+    CARD_ARTIST_NAME.innerHTML = "Nome do Artista";
+    MUSIC_TIME.innerHTML = "00:00";
+
+    if (DOCK_MUSIC_IMAGE) DOCK_MUSIC_IMAGE.style.backgroundImage = PLACEHOLDER_IMAGE;
+    if (DOCK_MUSIC_NAME) DOCK_MUSIC_NAME.innerHTML = "";
+    if (DOCK_ARTIST_NAME) DOCK_ARTIST_NAME.innerHTML = "";
+
+    resetProgressBar();
+    PLAYER_BTN.style.display = "flex";
+    PAUSE_BTN.style.display = "none";
+};
+
 const selectActiveMusicElement = () => {
     if (!MUSIC_LIST || !currentMusic || !currentPlaylist) return;
     if (currentPlaylist.id != currentMusic.playlistId) return;
@@ -185,48 +234,48 @@ const selectActiveMusicElement = () => {
     });
 };
 
+// Atualiza SÓ a barra de progresso / relógio. A troca de música ao terminar
+// uma faixa não depende mais daqui — fica a cargo de Music.onTrackEnded,
+// que usa o evento nativo "onended" do Web Audio API e por isso continua
+// funcionando com a aba em segundo plano (requestAnimationFrame é pausado
+// pelo navegador nesse cenário, então não pode ser o gatilho da troca).
 const updateProgressBar = () => {
     if (!Music.isPlaying || !currentMusic || !currentMusic.audioBuffer) return;
 
-    const currentTime = Music.getCurrentTime(currentMusic);
     const duration = currentMusic.audioBuffer.duration;
+    const currentTime = Math.min(Music.getCurrentTime(), duration);
     const progressPercent = Math.min((currentTime / duration) * 100, 100);
 
     PROGRESS_BAR.style.width = `${progressPercent}%`;
     CURRENT_TIME.innerHTML = Music.getDurationMusic(currentTime);
 
-    if (currentTime >= duration) {
-        Music.stopMusic();
-        resetProgressBar();
+    animationFrameId = requestAnimationFrame(updateProgressBar);
+};
 
-        let nextMusic;
+// Ponto único de troca de música: para o que estava tocando, libera o
+// AudioBuffer da música anterior da memória (é a causa do consumo de
+// memória crescer com o tempo de uso), atualiza a UI e toca a nova.
+const switchToMusic = (newMusic) => {
+    if (!newMusic) return;
 
-        if (isRandomPlayer) {
-            nextMusic = Music.getRandomMusic(currentMusic);
-        } else if (isRepeatPlayer) {
-            nextMusic = currentMusic;
-        } else {
-            nextMusic = Music.nextMusic(currentMusic);
-        }
+    const previousMusic = currentMusic;
 
-        if (nextMusic) {
-            currentMusic = nextMusic;
-            updateCurrentMusicUI();
+    Music.stopMusic();
+    resetProgressBar();
 
-            loadAndPlayMusic(currentMusic);
-        } else {
-            PLAYER_BTN.style.display = "flex";
-            PAUSE_BTN.style.display = "none";
-        }
-        return;
+    if (previousMusic && previousMusic.id !== newMusic.id) {
+        Music.unloadAudioBuffer(previousMusic);
     }
 
-    animationFrameId = requestAnimationFrame(updateProgressBar);
+    currentMusic = newMusic;
+    updateCurrentMusicUI();
+    loadAndPlayMusic(currentMusic);
 };
 
 const loadAndPlayMusic = async (music) => {
     if (!music.audioBuffer) {
-        // Se recarregou a página, a música não tem o buffer ainda. Puxamos do IndexedDB.
+        // Se recarregou a página (ou o buffer foi liberado da memória), a
+        // música não tem o buffer ainda. Puxamos do IndexedDB.
         try {
             const key = `${music.playlistId}_${music.id}`;
             const arrayBuffer = await getAudioFile(key);
@@ -238,13 +287,18 @@ const loadAndPlayMusic = async (music) => {
                 alert(
                     "Erro: Arquivo de áudio não encontrado no banco de dados.",
                 );
-                return; 
+                return;
             }
         } catch (error) {
             console.error("Erro ao carregar o áudio do IndexedDB:", error);
             return;
         }
     }
+
+    // A música pode ter sido trocada de novo enquanto aguardávamos o
+    // IndexedDB/decode acima — se não é mais a atual, não inicia a
+    // reprodução por cima da que já está tocando.
+    if (currentMusic !== music) return;
 
     PLAYER_BTN.style.display = "none";
     PAUSE_BTN.style.display = "flex";
@@ -254,7 +308,7 @@ const loadAndPlayMusic = async (music) => {
 };
 
 const playCurrentMusic = () => {
-    if (!currentMusic) return;
+    if (!currentMusic || Music.isPlaying) return;
     loadAndPlayMusic(currentMusic);
 };
 
@@ -279,6 +333,22 @@ async function getRawArrayBuffer(file) {
         FILE_READER.onerror = (erro) => reject(erro);
         FILE_READER.readAsArrayBuffer(file);
     });
+}
+
+// Converte bytes crus (ex: capa de álbum extraída pelo jsmediatags) para
+// base64 em pedaços, em vez de concatenar caractere por caractere — bem
+// mais rápido/leve pra imagens grandes, e evita manter a string binária
+// crua (2 bytes por caractere em JS) na memória e no localStorage.
+function bytesToBase64(bytes) {
+    const CHUNK_SIZE = 0x8000;
+    let binary = "";
+    for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
+        binary += String.fromCharCode.apply(
+            null,
+            bytes.subarray(i, i + CHUNK_SIZE),
+        );
+    }
+    return window.btoa(binary);
 }
 
 CREATE_PLAYLIST_BTN.addEventListener("click", () => {
@@ -353,20 +423,36 @@ MUSIC_LIST.addEventListener("click", async (event) => {
     const musicItem = event.target.closest(".music-item");
     if (!musicItem || !currentPlaylist) return;
 
-    const deleteBtn = event.target.closest("#remove-music-btn");
+    const deleteBtn = event.target.closest(".remove-music-btn");
 
     if (deleteBtn) {
         event.stopPropagation();
-        const musicItem = deleteBtn.closest(".music-item");
         const musicId = musicItem.getAttribute("data-id");
-        
-        if (!currentPlaylist) return;
 
-        let nextMusic = Music.getRandomMusic(currentMusic);
+        const isDeletingCurrentMusic =
+            currentMusic &&
+            currentMusic.id == musicId &&
+            currentMusic.playlistId == currentPlaylist.id;
 
-        if (currentMusic && currentMusic.id == musicId && currentMusic.playlistId == currentPlaylist.id) {
+        // Só faz sentido calcular/trocar a música "atual" se a música
+        // removida for justamente a que está tocando/selecionada. Antes o
+        // código reatribuía currentMusic a uma música aleatória mesmo ao
+        // apagar uma música qualquer, fazendo a UI mostrar informações de
+        // uma música diferente da que continuava tocando.
+        let replacementMusic = null;
+
+        if (isDeletingCurrentMusic) {
+            replacementMusic = isRandomPlayer
+                ? Music.getRandomMusic(currentMusic)
+                : Music.nextMusic(currentMusic);
+
+            // Playlist só tinha essa música: não há substituto.
+            if (replacementMusic && replacementMusic.id == musicId) {
+                replacementMusic = null;
+            }
+
             Music.stopMusic();
-            resetProgressBar();
+            Music.unloadAudioBuffer(currentMusic);
             currentMusic = null;
         }
 
@@ -377,21 +463,24 @@ MUSIC_LIST.addEventListener("click", async (event) => {
 
         renderMusicList(currentPlaylist.musics);
         updatePlaylistCardInfo(currentPlaylist);
-        currentMusic = nextMusic;
-        updateCurrentMusicUI();
-    };
+
+        if (isDeletingCurrentMusic) {
+            if (replacementMusic) {
+                currentMusic = replacementMusic;
+                updateCurrentMusicUI();
+            } else {
+                resetCurrentMusicUI();
+            }
+        }
+
+        return;
+    }
 
     const musicId = musicItem.getAttribute("data-id");
     const selectedMusic = Music.getMusicByID(currentPlaylist.id, musicId);
 
     if (selectedMusic) {
-        Music.stopMusic();
-        resetProgressBar();
-
-        currentMusic = selectedMusic;
-        updateCurrentMusicUI();
-
-        loadAndPlayMusic(currentMusic);
+        switchToMusic(selectedMusic);
     }
 });
 
@@ -401,10 +490,15 @@ ADD_MUSIC_CANCEL.addEventListener("click", () => {
     PLAYER_LAYOUT.style.filter = "blur(0px)";
     if (LABEL) LABEL.style.display = "grid";
     if (MUSIC_VIEW) MUSIC_VIEW.style.display = "none";
-    IMAGE_VIEW.style.backgroundImage = "url(./assets/images/molde.png)";
+    IMAGE_VIEW.style.backgroundImage = PLACEHOLDER_IMAGE;
     MUSIC_NAME_VIEW.innerHTML = "";
     ARTIST_NAME_VIEW.innerHTML = "";
     FILE_INPUT.value = "";
+
+    // Invalida qualquer leitura de tags ainda em andamento pra essa sessão
+    // do formulário, pra ela não "aparecer" mais tarde e preencher campos
+    // de um upload que o usuário já cancelou/fechou.
+    uploadToken++;
 
     uploadedMusicName = "";
     uploadedArtistName = "";
@@ -416,41 +510,53 @@ FILE_INPUT.addEventListener("change", async (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
-    rawArrayBuffer = await getRawArrayBuffer(file);
+    // Identifica esta seleção específica. Se o usuário trocar de arquivo
+    // antes da leitura (FileReader/jsmediatags) do anterior terminar, o
+    // resultado atrasado do arquivo antigo é descartado em vez de
+    // sobrescrever os dados do arquivo novo — essa condição de corrida era
+    // a causa da música tocar com nome/artista/capa de OUTRA música.
+    const thisUploadToken = ++uploadToken;
+
+    const bufferForThisFile = await getRawArrayBuffer(file);
+    if (thisUploadToken !== uploadToken) return; // seleção já foi trocada
+    rawArrayBuffer = bufferForThisFile;
+
+    const applyMetadata = (name, artist, imageBase64, imageFormat) => {
+        if (thisUploadToken !== uploadToken) return; // seleção já foi trocada
+
+        uploadedMusicName = name;
+        uploadedArtistName = artist;
+        musicImageData = imageBase64;
+
+        MUSIC_NAME_VIEW.innerHTML = uploadedMusicName;
+        ARTIST_NAME_VIEW.innerHTML = uploadedArtistName;
+        IMAGE_VIEW.style.backgroundImage = imageBase64
+            ? `url(data:${imageFormat};base64,${imageBase64})`
+            : PLACEHOLDER_IMAGE;
+
+        if (LABEL) LABEL.style.display = "none";
+        if (MUSIC_VIEW) MUSIC_VIEW.style.display = "flex";
+    };
 
     jsmediatags.read(file, {
         onSuccess: (tag) => {
             const tags = tag.tags;
+            const name = tags.title || file.name.replace(/\.[^/.]+$/, "");
+            const artist = tags.artist || "Artista Desconhecido";
 
-            uploadedMusicName =
-                tags.title || file.name.replace(/\.[^/.]+$/, "");
-            uploadedArtistName = tags.artist || "Artista Desconhecido";
+            let imageBase64 = null;
+            let imageFormat = null;
 
             if (tags.picture) {
-                const data = tags.picture.data;
-                let base64String = "";
-                for (let i = 0; i < data.length; i++) {
-                    base64String += String.fromCharCode(data[i]);
-                }
-                musicImageData = base64String;
-                IMAGE_VIEW.style.backgroundImage = `url(data:${tags.picture.format};base64,${window.btoa(base64String)})`;
+                imageFormat = tags.picture.format;
+                imageBase64 = bytesToBase64(new Uint8Array(tags.picture.data));
             }
 
-            MUSIC_NAME_VIEW.innerHTML = uploadedMusicName;
-            ARTIST_NAME_VIEW.innerHTML = uploadedArtistName;
-
-            if (LABEL) LABEL.style.display = "none";
-            if (MUSIC_VIEW) MUSIC_VIEW.style.display = "flex";
+            applyMetadata(name, artist, imageBase64, imageFormat);
         },
         onError: () => {
-            uploadedMusicName = file.name.replace(/\.[^/.]+$/, "");
-            uploadedArtistName = "Artista Desconhecido";
-
-            MUSIC_NAME_VIEW.innerHTML = uploadedMusicName;
-            ARTIST_NAME_VIEW.innerHTML = uploadedArtistName;
-
-            if (LABEL) LABEL.style.display = "none";
-            if (MUSIC_VIEW) MUSIC_VIEW.style.display = "flex";
+            const name = file.name.replace(/\.[^/.]+$/, "");
+            applyMetadata(name, "Artista Desconhecido", null, null);
         },
     });
 });
@@ -511,7 +617,7 @@ ADD_MUSIC_SUBMIT.addEventListener("click", async (event) => {
 
 // Botões de controle de música
 PLAYER_BTN.addEventListener("click", () => {
-    if (currentMusic) playCurrentMusic();
+    playCurrentMusic();
 });
 
 PAUSE_BTN.addEventListener("click", () => {
@@ -521,41 +627,21 @@ PAUSE_BTN.addEventListener("click", () => {
 BTN_NEXT.addEventListener("click", () => {
     if (!currentMusic) return;
 
-    let nextMusic;
+    const nextMusic = isRandomPlayer
+        ? Music.getRandomMusic(currentMusic)
+        : Music.nextMusic(currentMusic);
 
-    if (isRandomPlayer) {
-        nextMusic = Music.getRandomMusic(currentMusic);
-    } else {
-        nextMusic = Music.nextMusic(currentMusic);
-    }
-
-    if (nextMusic) {
-        Music.stopMusic();
-        resetProgressBar();
-        currentMusic = nextMusic;
-        updateCurrentMusicUI();
-        loadAndPlayMusic(currentMusic);
-    }
+    switchToMusic(nextMusic);
 });
 
 BTN_PREV.addEventListener("click", () => {
     if (!currentMusic) return;
 
-    let prevMusic;
+    const prevMusic = isRandomPlayer
+        ? Music.getRandomMusic(currentMusic)
+        : Music.prevMusic(currentMusic);
 
-    if (isRandomPlayer) {
-        prevMusic = Music.getRandomMusic(currentMusic);
-    } else {
-        prevMusic = Music.prevMusic(currentMusic);
-    }
-
-    if (prevMusic) {
-        Music.stopMusic();
-        resetProgressBar();
-        currentMusic = prevMusic;
-        updateCurrentMusicUI();
-        loadAndPlayMusic(currentMusic);
-    }
+    switchToMusic(prevMusic);
 });
 
 PLAYLIST_TOOLS_BTN.forEach((tool) => {

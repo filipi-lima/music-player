@@ -6,6 +6,11 @@ export default class Music {
     static pauseOffset = 0;
     static currentSourceNode = null;
 
+    // Callback opcional, definido pelo main.js, chamado quando uma música
+    // termina NATURALMENTE (chegou ao fim sozinha). Não é chamado quando a
+    // música é pausada, parada ou trocada manualmente pelo usuário.
+    static onTrackEnded = null;
+
     // 1. Instância ÚNICA global do motor de áudio para toda a aplicação
     static audioContext = new (
         window.AudioContext || window.webkitAudioContext
@@ -39,6 +44,23 @@ export default class Music {
         SOURCE_NODE.buffer = music.audioBuffer;
         SOURCE_NODE.connect(this.audioContext.destination);
 
+        // Disparado pelo próprio Web Audio API quando o áudio termina sozinho.
+        // Isso continua funcionando mesmo com a aba em segundo plano, ao
+        // contrário de uma lógica baseada em requestAnimationFrame.
+        SOURCE_NODE.onended = () => {
+            // Se esse node não é mais o node "atual", foi um stop/pause manual
+            // (que já limpa onended antes de chamar .stop()) ou já foi trocado.
+            if (this.currentSourceNode !== SOURCE_NODE) return;
+
+            this.currentSourceNode = null;
+            this.isPlaying = false;
+            this.pauseOffset = 0;
+
+            if (typeof this.onTrackEnded === "function") {
+                this.onTrackEnded(music);
+            }
+        };
+
         const offset = this.pauseOffset;
         this.startTime = this.audioContext.currentTime - offset;
 
@@ -46,7 +68,7 @@ export default class Music {
 
         // Adionar a lista de músicas já tocadas
         const PLAYLIST = Playlist.getPlaylistById(music.playlistId);
-        PLAYLIST.musicsPlayed.push(music.id)
+        if (PLAYLIST) PLAYLIST.musicsPlayed.push(music.id);
 
         this.currentSourceNode = SOURCE_NODE;
         this.isPlaying = true;
@@ -55,6 +77,9 @@ export default class Music {
     static pauseMusic() {
         if (!this.isPlaying || !this.currentSourceNode) return;
 
+        // Remove o listener ANTES de parar, senão o pause dispararia
+        // "onTrackEnded" como se a música tivesse acabado sozinha.
+        this.currentSourceNode.onended = null;
         this.currentSourceNode.stop();
         this.currentSourceNode.disconnect();
         this.currentSourceNode = null;
@@ -65,6 +90,7 @@ export default class Music {
 
     static stopMusic() {
         if (this.currentSourceNode) {
+            this.currentSourceNode.onended = null;
             this.currentSourceNode.stop();
             this.currentSourceNode.disconnect();
             this.currentSourceNode = null;
@@ -72,6 +98,15 @@ export default class Music {
 
         this.pauseOffset = 0;
         this.isPlaying = false;
+    }
+
+    // Libera o AudioBuffer (PCM decodificado) de uma música da memória.
+    // Chame isso sempre que sair de uma música para outra diferente, pra
+    // evitar acúmulo de buffers decodificados ao longo da sessão. O buffer
+    // volta a ser carregado do IndexedDB automaticamente quando a música
+    // for tocada de novo (ver loadAndPlayMusic no main.js).
+    static unloadAudioBuffer(music) {
+        if (music) music.audioBuffer = null;
     }
 
     static getCurrentTime() {
@@ -103,21 +138,29 @@ export default class Music {
 
         return currentIndex > 0
             ? playlist.musics[currentIndex - 1]
-            : playlist.musics[playlist.size -1];
+            : playlist.musics[playlist.size - 1];
     }
 
     static getRandomMusic(currentMusic) {
         if (!currentMusic) return null;
         const PLAYLIST = Playlist.getPlaylistById(currentMusic.playlistId);
         if (!PLAYLIST || PLAYLIST.musics.length === 0) return null;
-        if (PLAYLIST.size == PLAYLIST.musicsPlayed.length) PLAYLIST.musicsPlayed = [];
 
-        let randomNumber = 0;
+        if (PLAYLIST.size <= PLAYLIST.musicsPlayed.length) {
+            PLAYLIST.musicsPlayed = [];
+        }
 
-        do {
-            randomNumber = Math.floor(Math.random() * PLAYLIST.size);
-        } while (PLAYLIST.musicsPlayed.includes(randomNumber));
+        // Sorteia diretamente entre os objetos de música ainda não tocados,
+        // em vez de sortear um número e usar como índice do array. Assim o
+        // resultado nunca depende de "id == posição no array", que deixa de
+        // ser verdade assim que uma música é removida da playlist.
+        const availableMusics = PLAYLIST.musics.filter(
+            (m) => !PLAYLIST.musicsPlayed.includes(m.id),
+        );
 
-        return PLAYLIST.musics[randomNumber];
+        const pool = availableMusics.length > 0 ? availableMusics : PLAYLIST.musics;
+        const randomIndex = Math.floor(Math.random() * pool.length);
+
+        return pool[randomIndex];
     }
 }

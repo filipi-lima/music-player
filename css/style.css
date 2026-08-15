@@ -222,7 +222,7 @@ body {
     background-size: cover;
 }
 
-#remove-music-btn {
+.remove-music-btn {
     background: none;
     border: none;
     color: rgba(255, 255, 255, 0.4);
@@ -230,12 +230,12 @@ body {
     display: none;
 }
 
-#remove-music-btn:hover {
+.remove-music-btn:hover {
     color: var(--text-main);
     text-shadow: rgba(255, 255, 255, 0.5) 1px 0 10px;
 }
 
-.music-item:hover #remove-music-btn {
+.music-item:hover .remove-music-btn {
     display: block;
 }
 
