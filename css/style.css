@@ -215,11 +215,14 @@ body {
 }
 
 .music-item-img {
+    box-sizing: border-box;
     width: 45px;
     height: 45px;
     border-radius: 6px;
     background-position: center;
     background-size: cover;
+    padding: 10px;
+    display: flex;
 }
 
 .remove-music-btn {
@@ -404,4 +407,10 @@ body {
 .musics-number-text {
     font-size: 0.75rem;
     color: var(--text-muted);
+}
+
+.sound-wave-icon {
+    filter: brightness(10000%);
+    opacity: 0.8;
+    display: none;
 }

@@ -149,7 +149,9 @@ const renderMusicList = (musics) => {
             (music) => `
         <div class="music-item" data-id="${music.id}">
             <div class="music-item-content">
-                <div class="music-item-img" style="background-image: ${decodeImage("image/jpg", music.image)}"></div>
+                <div class="music-item-img" style="background-image: ${decodeImage("image/jpg", music.image)}">
+                    <img src="./assets/images/sound-wave.gif" class="sound-wave-icon">
+                </div>
                 <div class="music-item-details">
                     <p class="list-music__name">${music.name}</p>
                     <p class="list-music__artist">${music.artist}</p>
@@ -228,8 +230,10 @@ const selectActiveMusicElement = () => {
 
     MUSIC_LIST.querySelectorAll(".music-item").forEach((element) => {
         element.classList.remove("select");
+        element.querySelector(".sound-wave-icon").style.display = "none"
         if (element.getAttribute("data-id") == currentMusic.id) {
             element.classList.add("select");
+            element.querySelector(".sound-wave-icon").style.display = "block"
         }
     });
 };
