@@ -84,13 +84,14 @@ body {
 }
 
 .tool-btn.active {
-    background: var(--purple-primary);
-    border-color: var(--purple-primary);
+    background: var(--purple-primary) !important;
+    border-color: var(--purple-primary) !important;
 }
 
 .tool-btn:hover {
-    background: var(--purple-primary);
-    border-color: var(--purple-primary);
+    background: rgb(138, 43, 226, 0.5);
+    border-color: rgb(138, 43, 226, 0.5);
+    box-shadow: 0px 0px 8px rgba(154, 77, 202, 0.3);
 }
 
 /* --- Card do Player Atual (Topo) --- */
@@ -387,6 +388,49 @@ body {
     display: flex;
 }
 
+.add-music-btn,
+.delete-playlist-btn {
+    opacity: 0.5;
+    color: #fff;
+    border: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: 0.5rem;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    bottom: 18px;
+    transition: opacity 0.2s, background 0.2s;
+}
+
+.add-music-btn {
+    background-color: var(--bg-main);
+    right: 16px;
+}
+
+.add-music-btn:hover {
+    opacity: 0.8;
+    box-shadow: 0 0px 8px rgba(168, 168, 168, 0.2);
+}
+
+.delete-playlist-btn {
+    background-color: var(--bg-main);
+    right: 50px;
+}
+
+.delete-playlist-btn:hover {
+    opacity: 1;
+    background-color: var(--purple-primary);
+    box-shadow: 0 0px 8px rgba(168, 168, 168, 0.2);
+}
+
+.playlist-card-item:hover .delete-playlist-btn {
+    display: flex;
+}
+
 .playlist-card-item.select {
     background-color: rgba(154, 77, 202, 0.3);
     border-color: var(--purple-primary);
@@ -411,6 +455,6 @@ body {
 
 .sound-wave-icon {
     filter: brightness(10000%);
-    opacity: 0.8;
+    opacity: 0.65;
     display: none;
 }

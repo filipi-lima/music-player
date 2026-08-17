@@ -77,6 +77,20 @@ export default class Playlist {
         return this.playlists.find((p) => p.id == playlistId);
     }
 
+    // Remove a playlist da memória e do localStorage. Retorna a playlist
+    // removida (com o array `musics` intacto) pra quem chamou poder apagar
+    // o áudio de cada música dela no IndexedDB — essa parte fica a cargo do
+    // main.js, que é quem já sabe conversar com o storage.js.
+    static removePlaylist(playlistId) {
+        const playlist = this.getPlaylistById(playlistId);
+        if (!playlist) return null;
+
+        this.playlists = this.playlists.filter((p) => p.id != playlistId);
+        this.savePlaylistsData();
+
+        return playlist;
+    }
+
     // Só aceita o alfabeto do base64. Bytes crus de imagem (formato antigo,
     // de antes desta correção) quase sempre têm bytes fora desse conjunto,
     // então esse teste é confiável na prática pra distinguir os dois casos.

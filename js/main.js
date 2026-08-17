@@ -132,7 +132,12 @@ const renderNewPlaylist = (playlist) => {
             <p class="playlist-name-text">${playlist.name}</p>
             <p class="musics-number-text">${playlist.size === 1 ? "1 Música" : playlist.size + " Músicas"}</p>
         </div>
-        <button class="add-music-btn" title="Adicionar música">+</button>
+        <button class="add-music-btn" title="Adicionar música">
+            <i class="fa-solid fa-plus"></i>
+        </button>
+        <button class="delete-playlist-btn" title="Excluir playlist">
+            <i class="fa-solid fa-minus"></i>
+        </button>
     </div>`;
 
     PLAYLISTS_GRID.insertAdjacentHTML("beforeend", html);
@@ -222,6 +227,62 @@ const resetCurrentMusicUI = () => {
     resetProgressBar();
     PLAYER_BTN.style.display = "flex";
     PAUSE_BTN.style.display = "none";
+};
+
+// Exclui uma playlist por completo: apaga o áudio de cada música dela no
+// IndexedDB (senão fica "lixo" ocupando espaço pra sempre), para o player
+// se a música tocando era dessa playlist, e atualiza a barra lateral e a
+// seção principal.
+const deletePlaylist = async (playlist) => {
+    for (const music of playlist.musics) {
+        const key = `${playlist.id}_${music.id}`;
+        try {
+            await deleteAudioFile(key);
+        } catch (error) {
+            console.error(
+                `Não foi possível apagar o áudio da música "${music.name}":`,
+                error,
+            );
+        }
+    }
+
+    if (currentMusic && currentMusic.playlistId == playlist.id) {
+        Music.stopMusic();
+        Music.unloadAudioBuffer(currentMusic);
+        currentMusic = null;
+        resetCurrentMusicUI();
+    }
+
+    if (selectedPlaylistForAdd && selectedPlaylistForAdd.id == playlist.id) {
+        selectedPlaylistForAdd = null;
+        if (ADD_MUSIC_FORM.style.display === "block") {
+            ADD_MUSIC_CANCEL.click();
+        }
+    }
+
+    Playlist.removePlaylist(playlist.id);
+
+    const card = PLAYLISTS_GRID.querySelector(
+        `.playlist-card-item[data-id="${playlist.id}"]`,
+    );
+    if (card) card.remove();
+
+    if (currentPlaylist && currentPlaylist.id == playlist.id) {
+        currentPlaylist = Playlist.playlists[0] || null;
+
+        if (currentPlaylist) {
+            PLAYLIST_NAME_TITLE.innerHTML = currentPlaylist.name;
+            renderMusicList(currentPlaylist.musics);
+
+            const newCard = PLAYLISTS_GRID.querySelector(
+                `.playlist-card-item[data-id="${currentPlaylist.id}"]`,
+            );
+            if (newCard) newCard.classList.add("select");
+        } else {
+            PLAYLIST_NAME_TITLE.innerHTML = "Selecione uma Playlist";
+            renderMusicList([]);
+        }
+    }
 };
 
 const selectActiveMusicElement = () => {
@@ -393,14 +454,14 @@ CREATE_PLAYLIST_SUBMIT.addEventListener("click", (event) => {
     }
 });
 
-PLAYLISTS_GRID.addEventListener("click", (event) => {
+PLAYLISTS_GRID.addEventListener("click", async (event) => {
     const card = event.target.closest(".playlist-card-item");
     if (!card) return;
 
     const playlistId = card.getAttribute("data-id");
     const targetPlaylist = Playlist.getPlaylistById(playlistId);
 
-    if (event.target.classList.contains("add-music-btn")) {
+    if (event.target.closest(".add-music-btn")) {
         event.stopPropagation();
         selectedPlaylistForAdd = targetPlaylist;
 
@@ -408,6 +469,19 @@ PLAYLISTS_GRID.addEventListener("click", (event) => {
         ADD_MUSIC_FORM.style.display = "block";
         document.body.style.overflowY = "hidden";
         PLAYER_LAYOUT.style.filter = "blur(10px)";
+        return;
+    }
+
+    if (event.target.closest(".delete-playlist-btn")) {
+        event.stopPropagation();
+        if (!targetPlaylist) return;
+
+        const confirmDelete = confirm(
+            `Tem certeza que deseja excluir a playlist "${targetPlaylist.name}"?\nEssa ação não pode ser desfeita.`,
+        );
+        if (!confirmDelete) return;
+
+        await deletePlaylist(targetPlaylist);
         return;
     }
 
@@ -595,6 +669,12 @@ ADD_MUSIC_SUBMIT.addEventListener("click", async (event) => {
             decodedAudioBuffer,
             selectedPlaylistForAdd.id,
         );
+
+        if (!updatedPlaylist) {
+            alert("Essa playlist não existe mais.");
+            ADD_MUSIC_CANCEL.click();
+            return;
+        }
 
         const newMusic = updatedPlaylist.musics[updatedPlaylist.musics.length - 1];
 
