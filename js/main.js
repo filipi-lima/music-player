@@ -721,9 +721,7 @@ BTN_NEXT.addEventListener("click", () => {
 BTN_PREV.addEventListener("click", () => {
     if (!currentMusic) return;
 
-    const prevMusic = isRandomPlayer
-        ? Music.getRandomMusic(currentMusic)
-        : Music.prevMusic(currentMusic);
+    const prevMusic = Music.prevMusic(currentMusic);
 
     switchToMusic(prevMusic);
 });
