@@ -1,6 +1,7 @@
 import Music from "./classes/Music.js";
 import Playlist from "./classes/Playlist.js";
 import decodeImage from "./utils/decodeImage.js";
+import { generatePlaylistCover } from "./utils/generatePlaylistImage.js";
 import { saveAudioFile, getAudioFile, deleteAudioFile } from "./utils/storage.js";
 
 const jsmediatags = window.jsmediatags;
@@ -88,6 +89,19 @@ let uploadToken = 0;
 window.addEventListener("DOMContentLoaded", () => {
     Playlist.loadPlaylistsData(); // Puxa os dados do localStorage
 
+    // Playlists criadas antes dessa funcionalidade existir não têm capa
+    // salva. Gera uma pra cada uma agora, uma única vez, e persiste — assim
+    // toda playlist (antiga ou nova) fica com uma capa estável, em vez de
+    // regenerar (e mudar) a cada carregamento da página.
+    let generatedMissingCover = false;
+    Playlist.playlists.forEach((playlist) => {
+        if (!playlist.image) {
+            playlist.image = generatePlaylistCover();
+            generatedMissingCover = true;
+        }
+    });
+    if (generatedMissingCover) Playlist.savePlaylistsData();
+
     // Desenha as playlists recuperadas
     Playlist.playlists.forEach((playlist) => {
         renderNewPlaylist(playlist);
@@ -125,9 +139,13 @@ Music.onTrackEnded = (finishedMusic) => {
 };
 
 const renderNewPlaylist = (playlist) => {
+    const coverImage = playlist.image
+        ? decodeImage("image/png", playlist.image)
+        : PLACEHOLDER_IMAGE;
+
     const html = `
     <div class="playlist-card-item" data-id="${playlist.id}">
-        <img src="./assets/images/molde.png" alt="Playlist" class="playlist-card-img">
+        <div class="playlist-card-img" style="background-image: ${coverImage}"></div>
         <div class="playlist-card-info">
             <p class="playlist-name-text">${playlist.name}</p>
             <p class="musics-number-text">${playlist.size === 1 ? "1 Música" : playlist.size + " Músicas"}</p>
@@ -436,7 +454,8 @@ CREATE_PLAYLIST_SUBMIT.addEventListener("click", (event) => {
     if (!name) return;
 
     try {
-        const newPlaylist = Playlist.createPlaylist(name);
+        const coverImage = generatePlaylistCover();
+        const newPlaylist = Playlist.createPlaylist(name, coverImage);
         renderNewPlaylist(newPlaylist);
 
         if (!currentPlaylist) {

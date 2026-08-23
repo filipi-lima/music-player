@@ -3,10 +3,11 @@ import Music from "./Music.js";
 export default class Playlist {
     static playlists = [];
 
-    constructor(name, musics, id) {
+    constructor(name, musics, id, image = null) {
         this.name = name;
         this.musics = musics;
         this.id = id;
+        this.image = image;
         this.size = musics ? musics.length : 0;
         this.musicsPlayed = [];
     }
@@ -25,7 +26,7 @@ export default class Playlist {
         return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     }
 
-    static createPlaylist(playlistName) {
+    static createPlaylist(playlistName, image = null) {
         const playlistExists = this.playlists.some(
             (p) => p.name === playlistName,
         );
@@ -37,6 +38,7 @@ export default class Playlist {
             playlistName,
             [],
             this.generateId(),
+            image,
         );
         this.playlists.push(NEW_PLAYLIST);
 
@@ -122,6 +124,7 @@ export default class Playlist {
             id: playlist.id,
             name: playlist.name,
             size: playlist.size,
+            image: playlist.image,
             musics: playlist.musics.map((music) => ({
                 id: music.id,
                 name: music.name,
@@ -186,7 +189,7 @@ export default class Playlist {
                 );
             });
 
-            const playlist = new Playlist(pData.name, musics, pData.id);
+            const playlist = new Playlist(pData.name, musics, pData.id, pData.image);
             playlist.size = pData.size;
             return playlist;
         });
