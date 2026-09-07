@@ -2,7 +2,11 @@ import Music from "./classes/Music.js";
 import Playlist from "./classes/Playlist.js";
 import decodeImage from "./utils/decodeImage.js";
 import { generatePlaylistCover } from "./utils/generatePlaylistImage.js";
-import { saveAudioFile, getAudioFile, deleteAudioFile } from "./utils/storage.js";
+import {
+    saveAudioFile,
+    getAudioFile,
+    deleteAudioFile,
+} from "./utils/storage.js";
 
 const jsmediatags = window.jsmediatags;
 
@@ -233,12 +237,14 @@ const updateCurrentMusicUI = () => {
 // Usado quando não há mais nenhuma música "atual" (ex: playlist esvaziada).
 const resetCurrentMusicUI = () => {
     CARD_MUSIC_IMAGE.style.backgroundImage = PLACEHOLDER_IMAGE;
-    if (CARD_MUSIC_IMAGE.tagName === "IMG") CARD_MUSIC_IMAGE.src = "./assets/images/molde.png";
+    if (CARD_MUSIC_IMAGE.tagName === "IMG")
+        CARD_MUSIC_IMAGE.src = "./assets/images/molde.png";
     CARD_MUSIC_NAME.innerHTML = "Nome da Música";
     CARD_ARTIST_NAME.innerHTML = "Nome do Artista";
     MUSIC_TIME.innerHTML = "00:00";
 
-    if (DOCK_MUSIC_IMAGE) DOCK_MUSIC_IMAGE.style.backgroundImage = PLACEHOLDER_IMAGE;
+    if (DOCK_MUSIC_IMAGE)
+        DOCK_MUSIC_IMAGE.style.backgroundImage = PLACEHOLDER_IMAGE;
     if (DOCK_MUSIC_NAME) DOCK_MUSIC_NAME.innerHTML = "";
     if (DOCK_ARTIST_NAME) DOCK_ARTIST_NAME.innerHTML = "";
 
@@ -309,10 +315,10 @@ const selectActiveMusicElement = () => {
 
     MUSIC_LIST.querySelectorAll(".music-item").forEach((element) => {
         element.classList.remove("select");
-        element.querySelector(".sound-wave-icon").style.display = "none"
+        element.querySelector(".sound-wave-icon").style.display = "none";
         if (element.getAttribute("data-id") == currentMusic.id) {
             element.classList.add("select");
-            element.querySelector(".sound-wave-icon").style.display = "block"
+            element.querySelector(".sound-wave-icon").style.display = "block";
         }
     });
 };
@@ -695,7 +701,8 @@ ADD_MUSIC_SUBMIT.addEventListener("click", async (event) => {
             return;
         }
 
-        const newMusic = updatedPlaylist.musics[updatedPlaylist.musics.length - 1];
+        const newMusic =
+            updatedPlaylist.musics[updatedPlaylist.musics.length - 1];
 
         // SALVA NO INDEXEDDB! Chave única baseada no ID da playlist e da música
         const key = `${selectedPlaylistForAdd.id}_${newMusic.id}`;
@@ -740,7 +747,9 @@ BTN_NEXT.addEventListener("click", () => {
 BTN_PREV.addEventListener("click", () => {
     if (!currentMusic) return;
 
-    const prevMusic = Music.prevMusic(currentMusic);
+    const prevMusic = isRandomPlayer
+        ? Music.getRandomMusic(currentMusic)
+        : Music.nextMusic(currentMusic);
 
     switchToMusic(prevMusic);
 });
@@ -786,4 +795,12 @@ PLAYLIST_TOOLS_BTN.forEach((tool) => {
             }
         }
     });
+});
+
+// Key Events
+
+document.addEventListener("keypress", (event) => {
+    if (event.key === " " || event.key === "Space") {
+       Music.isPlaying ? pauseCurrentMusic() : playCurrentMusic();
+    }
 });
