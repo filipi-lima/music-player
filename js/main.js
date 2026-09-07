@@ -801,6 +801,7 @@ PLAYLIST_TOOLS_BTN.forEach((tool) => {
 
 document.addEventListener("keypress", (event) => {
     if (event.key === " " || event.key === "Space") {
+        event.preventDefault();
        Music.isPlaying ? pauseCurrentMusic() : playCurrentMusic();
     }
 });
